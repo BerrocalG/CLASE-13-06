@@ -3,50 +3,47 @@
 #include <avr/interrupt.h>
 #define F_CPU 16000000UL
 
-void config_timer(void){
-  TCCR0A|=(1<<WGM01);
-  TCCR0B|=(1<<CS01);
-}
-void delay_10us(void){
-  OCR0A=20;
-  TCNT0=0;
-  while(!(TIFR0&(1<<OCF0A)));
-  TIFR0|=(1<<OCF0A);
-}
-unsigned char b=50;
-void pwm(void){
-  DDRB|=0x01;
-  PORTB&=~0x01;
-  config_timer();
-}
-void pwm(unsigned char b){
-  PORTB|=0x01;
-  for(int i=0; i<100+b;i++){
-    delay_10us();
-  }
-  PORTB&=~0x01;
-  for(int i=0;i<1900-b;i++){
-    delay_10us();
-  }
+//ejercicio 4: controlar intensidad de corriente
+void config_intext(void){
+  EIMSK|=(1<<INT0);
+  EICRA|=(1<<ISC01);
+  DDRD&=~(1<<PD2);
 }
 
-void config(void){
-  EICRA|=(1<<ISC00)|(1<<ISC01); //Se activa con el flanco de bajada
-  EIMSK|=(1<<INT0);
-  DDRD &=~(0X04);
+void config_ADC(void){
+  ADCSRA|=(1<<ADEN)|(1<<ADIE)|(1<<ADPS2);
+  ADMUX|=(1<<REFS0);
 }
-int a=0;
+
+unsigned char porcentaje=0;
+
+ISR(ADC_vect){
+  porcentaje=ADC*(100.0/1023.0);
+  OCR0A=porcentaje*(1.2)+5;
+  ADCSRA|=(1<<ADSC);
+}
+
+void config_timer(void){
+  TCCR0A|=(1<<WGM01);
+}
+
 ISR(INT0_vect){
-  if (a>60){
-    a=0;
-    PORTB^=0x01;
-   }
- a++;
+  PORTB|=0x01;
+  TCNT0=0;
+  TCCR0B|=(1<<CS02)|(1<<CS00);
+  while(!(TIFR0&(1<<OCF0A)));
+  TIFR0|=(1<<OCF0A);
+  PORTB&=~0x01;
+  TCCR0B&=~((1<<CS02)|(1<<CS00));
 }
+
 int main(void){
-  DDRB|=0x01;
-  config();
+  config_ADC();
+  config_timer();
+  config_intext();
   sei();
+  ADCSRA|=(1<<ADSC);
+  DDRB|=0x01;
   while(1){
   }
 }
