@@ -2,7 +2,7 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #define F_CPU 16000000UL
-
+/*
 //ejercicio 4: controlar intensidad de corriente
 void config_intext(void){
   EIMSK|=(1<<INT0);
@@ -44,6 +44,38 @@ int main(void){
   sei();
   ADCSRA|=(1<<ADSC);
   DDRB|=0x01;
+  while(1){
+  }
+}
+  */
+
+  //ejercicio 5 fast pwm
+void config_ADC(void){
+  ADCSRA|=(1<<ADEN)|(1<<ADIE)|(1<<ADPS2);
+  ADMUX|=(1<<REFS0);
+}
+
+unsigned char porcentaje=0;
+
+ISR(ADC_vect){
+  porcentaje=ADC*(255.0/1023.0);
+  OCR0A=(unsigned char)(porcentaje);
+  ADCSRA|=(1<<ADSC);
+}
+
+void config_timer(void){
+  TCCR0A|=(1<<WGM01)|(1<<WGM00)|(1<<COM0A1);
+  TCCR0B|=(1<<CS02)|(1<<CS00);
+  OCR0A=0;
+  DDRD|=(1<<PD6);
+}
+
+int main(void){
+  config_ADC();
+  config_timer();
+  DDRB|=0x01;
+  sei();
+  ADCSRA|=(1<<ADSC);
   while(1){
   }
 }
